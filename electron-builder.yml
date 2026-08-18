@@ -36,7 +36,8 @@ win:
       arch:
         - x64
   icon: electron/icons/icon.ico
-  artifactName: ${productName}-Setup-${version}.${ext}
+  # 使用与 latest.yml 一致的 ASCII 文件名，避免中文名导致 electron-updater 下载失败
+  artifactName: spring-inventory-Setup-${version}.${ext}
   # 跳过 exe 资源编辑/签名（避免 winCodeSign 包在 Windows 上解压 darwin 符号链接失败）
   signAndEditExecutable: false
 
