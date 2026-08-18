@@ -29,6 +29,7 @@ export const api = {
   createSpring: (data) => request('/springs', { method: 'POST', body: JSON.stringify(data) }),
   updateSpring: (id, data) => request(`/springs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSpring: (id) => request(`/springs/${id}`, { method: 'DELETE' }),
+  importSprings: (rows) => request('/springs/import', { method: 'POST', body: JSON.stringify({ rows }) }),
 
   // 入库
   getInbound: (params = {}) => {

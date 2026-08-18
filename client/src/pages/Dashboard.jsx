@@ -4,13 +4,25 @@ import { api } from '../api';
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getDashboard().then(setData).catch(() => {}).finally(() => setLoading(false));
+    setLoading(true);
+    setError('');
+    api.getDashboard()
+      .then(d => { setData(d); })
+      .catch(e => { setData(null); setError(e.message || String(e)); })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="empty"><p>加载中...</p></div>;
-  if (!data) return <div className="empty"><p>加载失败</p></div>;
+  if (!data) return (
+    <div className="empty">
+      <div className="icon">⚠️</div>
+      <p>数据看板加载失败</p>
+      {error && <p style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 6 }}>{error}</p>}
+    </div>
+  );
 
   const statusMap = { normal: '正常', locked: '锁定', defective: '次品', reserved: '预留' };
   const statusColors = { normal: '#059669', locked: '#d97706', defective: '#dc2626', reserved: '#0891b2' };

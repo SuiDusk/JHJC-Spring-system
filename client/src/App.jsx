@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
@@ -18,7 +18,13 @@ const navItems = [
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [version, setVersion] = useState('');
   const location = useLocation();
+
+  // 从后端获取当前版本号（web/桌面端统一）
+  useEffect(() => {
+    fetch('/api/meta').then(r => r.json()).then(d => { if (d?.version) setVersion(d.version); }).catch(() => {});
+  }, []);
 
   const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0];
 
@@ -48,7 +54,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          弹簧厂仓储管理系统 v1.0
+          弹簧厂仓储管理系统 {version ? `v${version}` : ''}
         </div>
       </aside>
 

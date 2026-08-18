@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import { getDb } from './db.js';
 import springsRouter from './routes/springs.js';
 import inboundRouter from './routes/inbound.js';
@@ -10,6 +11,16 @@ import warehouseRouter from './routes/warehouse.js';
 import dashboardRouter from './routes/dashboard.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// 读取版本号（web/桌面端统一从此接口获取，避免前端硬编码不一致）
+function getAppVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
+    return { version: pkg.version || '1.0.0', name: pkg.productName || '弹簧厂出入库管理系统' };
+  } catch (e) {
+    return { version: '1.0.0', name: '弹簧厂出入库管理系统' };
+  }
+}
 
 export function createApp() {
   const app = express();
@@ -23,6 +34,9 @@ export function createApp() {
   app.use('/api/outbound', outboundRouter);
   app.use('/api/warehouse', warehouseRouter);
   app.use('/api/dashboard', dashboardRouter);
+
+  // 应用元信息（版本号等），供前端展示，web/桌面端统一
+  app.get('/api/meta', (req, res) => res.json(getAppVersion()));
 
   // 提供前端静态文件（打包版通过 STATIC_DIR 指向 resources 下的真实目录，避免 asar 读取边界问题）
   const clientDist = process.env.STATIC_DIR || path.join(__dirname, '..', 'client', 'dist');

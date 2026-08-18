@@ -1,9 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { api } from '../api';
 import SpringForm from '../components/SpringForm';
 
 const statusMap = { normal: '正常', locked: '锁定', defective: '次品', reserved: '预留' };
+
+// 导入/导出一致的列定义（顺序与后端映射一致）
+const IMPORT_HEADERS = [
+  '物料编码', '名称', '规格', '材质', '线径mm', '外径mm', '自由长度mm', '总圈数',
+  '旋向', '库存数量', '单位', '仓库区域', '状态', '最低库存', '最高库存', '单价', '供应商', '备注',
+];
 
 export default function Inventory() {
   const [springs, setSprings] = useState([]);
@@ -16,6 +22,9 @@ export default function Inventory() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -97,6 +106,66 @@ export default function Inventory() {
     XLSX.writeFile(wb, `弹簧库存_${ts}.xlsx`);
   };
 
+  // 下载导入模板（格式与导出一致，含一行示例数据，导入时请删除示例行）
+  const handleDownloadTemplate = () => {
+    const sampleRow = {
+      物料编码: 'SP-0001',
+      名称: '压缩弹簧',
+      规格: 'Φ20×50',
+      材质: '65Mn',
+      线径mm: 2,
+      外径mm: 20,
+      自由长度mm: 50,
+      总圈数: 8.5,
+      旋向: '右旋',
+      库存数量: 100,
+      单位: '个',
+      仓库区域: 'A区-原材料仓',
+      状态: '正常',
+      最低库存: 10,
+      最高库存: 500,
+      单价: 2.5,
+      供应商: '示例供应商',
+      备注: '示例数据，导入前请删除此行',
+    };
+    const rows = IMPORT_HEADERS.map(h => ({ [h]: sampleRow[h] !== undefined ? sampleRow[h] : '' }));
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    sheet['!cols'] = IMPORT_HEADERS.map(() => ({ wch: 16 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, '弹簧库存模板');
+    XLSX.writeFile(wb, '弹簧库存导入模板.xlsx');
+  };
+
+  // 选择并导入 Excel 文件
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      if (!sheet) { alert('文件中没有工作表'); return; }
+      // 将表头行作为对象键（json_to_sheet 导出的表头即为中文列名）
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      if (rawRows.length === 0) { alert('文件中没有数据可导入'); return; }
+      const result = await api.importSprings(rawRows);
+      setImportResult(result);
+      if (result.errors && result.errors.length > 0) {
+        alert(`导入完成：新增 ${result.created} 条，更新 ${result.updated} 条。\n有 ${result.errors.length} 条失败：\n${result.errors.slice(0, 10).join('\n')}`);
+      } else {
+        alert(`导入成功：新增 ${result.created} 条，更新 ${result.updated} 条。`);
+      }
+      loadData();
+    } catch (err) {
+      alert(`导入失败：${err.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleDelete = async (id, name) => {
     if (!confirm(`确定要删除物料 "${name}" 吗？`)) return;
     try {
@@ -147,10 +216,37 @@ export default function Inventory() {
           <button className="btn btn-outline btn-sm" onClick={invertSelect} disabled={springs.length === 0}>反选</button>
           <button className="btn btn-outline btn-sm" onClick={clearSelect} disabled={selectedIds.size === 0}>清空</button>
           <span style={{ flex: 1 }} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <button className="btn btn-outline btn-sm" onClick={handleDownloadTemplate}>⬇ 下载模板</button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? '导入中...' : '⬆ 导入 Excel'}
+          </button>
           <button className="btn btn-success btn-sm" onClick={handleExport} disabled={selectedSprings.length === 0}>
             ⬇ 导出 Excel ({selectedSprings.length})
           </button>
         </div>
+
+        {/* 导入结果提示 */}
+        {importResult && (
+          <div style={{ fontSize: 13, marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--success-light, #ecfdf5)', color: 'var(--success, #059669)' }}>
+            导入完成：新增 <b>{importResult.created}</b> 条，更新 <b>{importResult.updated}</b> 条。
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div style={{ color: 'var(--danger)', marginTop: 4 }}>
+                有 <b>{importResult.errors.length}</b> 条失败：{importResult.errors.slice(0, 5).join('；')}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 表格 */}
         {loading ? <div className="empty"><p>加载中...</p></div> :

@@ -13,9 +13,13 @@ export default function Settings() {
 
   useEffect(() => {
     mounted.current = true;
+    // 统一从后端获取版本/名称（web 与桌面端一致）；桌面端再用 desktopAPI 补充更新来源
+    fetch('/api/meta').then(r => r.json()).then(info => {
+      if (mounted.current && info) setAppInfo(prev => ({ ...prev, version: info.version, name: info.name }));
+    }).catch(() => {});
     if (typeof desktopAPI.getAppInfo === 'function') {
       desktopAPI.getAppInfo().then(info => {
-        if (mounted.current && info) setAppInfo(prev => ({ ...prev, ...info }));
+        if (mounted.current && info) setAppInfo(prev => ({ ...prev, ...info, source: info.source || prev.source }));
       }).catch(() => {});
     }
     if (typeof desktopAPI.onUpdateEvent === 'function') {
