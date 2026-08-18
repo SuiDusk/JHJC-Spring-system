@@ -55,9 +55,9 @@ npmRebuild: true
 # 直接复用本地已安装的 Electron 分发目录，避免从 GitHub 下载二进制（国内网络加速）
 electronDist: node_modules/electron/dist
 
-# 更新发布源：通过 GitHub Releases 分发新版本（创建仓库后填写 owner/repo）
+# 更新发布源：通过 GitHub Releases 分发新版本
 publish:
   provider: github
-  owner: YOUR_GITHUB_USERNAME
-  repo: spring-inventory
+  owner: SuiDusk
+  repo: JHJC-Spring-system
   releaseType: release
