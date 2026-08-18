@@ -1,0 +1,57 @@
+appId: com.spring.inventory
+productName: 弹簧厂出入库管理系统
+copyright: Copyright © 2026
+
+directories:
+  output: release
+  buildResources: electron/icons
+
+files:
+  - electron/**
+  - server/**
+  - package.json
+  - "!server/**/*.db"
+  - "!server/**/*.db-wal"
+  - "!server/**/*.db-shm"
+  - "!**/*.map"
+  - "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,LICENSE.md,*.test.js,*.spec.js}"
+  - "!**/*.md"
+
+extraResources:
+  - from: client/dist
+    to: client-dist
+    filter:
+      - "**/*"
+      - "!**/*.map"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: electron/icons/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
+  # 跳过 exe 资源编辑/签名（避免 winCodeSign 包在 Windows 上解压 darwin 符号链接失败）
+  signAndEditExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 弹簧厂出入库管理系统
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+
+npmRebuild: true
+
+# 直接复用本地已安装的 Electron 分发目录，避免从 GitHub 下载二进制（国内网络加速）
+electronDist: node_modules/electron/dist
+
+# 更新发布源：通过 GitHub Releases 分发新版本（创建仓库后填写 owner/repo）
+publish:
+  provider: github
+  owner: YOUR_GITHUB_USERNAME
+  repo: spring-inventory
+  releaseType: release

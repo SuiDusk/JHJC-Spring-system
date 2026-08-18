@@ -1,0 +1,10 @@
+{
+  "name": "spring-inventory",
+  "framework": "vite",
+  "buildCommand": "",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install",
+  "functions": {
+    "directory": "cloud-functions"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "弹簧厂出入库管理系统",
+  "short_name": "弹簧仓储",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1a56db",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a56db'/><text y='.7em' font-size='65' text-anchor='middle' x='50'>🔧</text></svg>",
+      "sizes": "144x144",
+      "type": "image/svg+xml"
+    }
+  ]
+}
