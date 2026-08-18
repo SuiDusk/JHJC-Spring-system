@@ -7,15 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let mainWindow = null;
 let httpServer = null;
-
-// electron-updater 仅在打包版启用（开发模式无 latest.yml / 更新源）
 let autoUpdater = null;
-if (app.isPackaged) {
-  const { autoUpdater: au } = await import('electron-updater');
-  autoUpdater = au;
-  autoUpdater.autoDownload = false; // 仅手动更新
-  autoUpdater.autoInstallOnAppQuit = true;
-}
 
 // 单实例锁：防止重复启动导致数据库并发写冲突
 const gotLock = app.requestSingleInstanceLock();
@@ -43,7 +35,6 @@ if (!gotLock) {
     }
   }
 
-  // 更新事件 → 渲染进程
   function wireUpdaterEvents() {
     if (!autoUpdater) return;
     autoUpdater.on('checking-for-update', () => sendUpdateEvent('checking-for-update'));
@@ -83,6 +74,22 @@ if (!gotLock) {
   }
 
   app.whenReady().then(async () => {
+    // electron-updater 必须在 app ready 后加载，且仅在打包版启用
+    if (app.isPackaged) {
+      try {
+        // 使用 require 以正确解析 CJS 的 autoUpdater getter（ESM named import 无法触发 getter）
+        const { createRequire } = await import('node:module');
+        const require = createRequire(import.meta.url);
+        const updater = require('electron-updater');
+        autoUpdater = updater.autoUpdater;
+        autoUpdater.autoDownload = false; // 仅手动更新
+        autoUpdater.autoInstallOnAppQuit = true;
+        wireUpdaterEvents();
+      } catch (err) {
+        console.error('electron-updater 加载失败:', err);
+      }
+    }
+
     try {
       const { startServer } = await import('../server/app.js');
       const { server, port } = await startServer(0, '127.0.0.1');
@@ -93,8 +100,6 @@ if (!gotLock) {
       console.error('启动内嵌服务失败:', err);
       app.quit();
     }
-
-    wireUpdaterEvents();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {

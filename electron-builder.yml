@@ -17,6 +17,12 @@ files:
   - "!**/node_modules/**/{CHANGELOG.md,README.md,readme.md,LICENSE,LICENSE.md,*.test.js,*.spec.js}"
   - "!**/*.md"
 
+# 原生模块必须解包到 asar.unpacked，否则运行时无法 dlopen
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/bindings/**"
+  - "**/node_modules/file-uri-to-path/**"
+
 extraResources:
   - from: client/dist
     to: client-dist

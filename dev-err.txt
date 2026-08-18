@@ -1,0 +1,17 @@
+启动内嵌服务失败: Error: The module '\\?\C:\Users\24605\CodeBuddy\20260804203011\spring-inventory\server\node_modules\better-sqlite3\build\Release\better_sqlite3.node'
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION 137. This version of Node.js requires
+NODE_MODULE_VERSION 125. Please try re-compiling or re-installing
+the module (for instance, using `npm rebuild` or `npm install`).
+    at process.func [as dlopen] (node:electron/js2c/node_init:2:2559)
+    at Module._extensions..node (node:internal/modules/cjs/loader:1602:18)
+    at Object.func [as .node] (node:electron/js2c/node_init:2:2559)
+    at Module.load (node:internal/modules/cjs/loader:1295:32)
+    at Module._load (node:internal/modules/cjs/loader:1111:12)
+    at c._load (node:electron/js2c/node_init:2:16955)
+    at Module.require (node:internal/modules/cjs/loader:1318:19)
+    at require (node:internal/modules/helpers:179:18)
+    at bindings (C:\Users\24605\CodeBuddy\20260804203011\spring-inventory\server\node_modules\bindings\bindings.js:112:48)
+    at new Database (C:\Users\24605\CodeBuddy\20260804203011\spring-inventory\server\node_modules\better-sqlite3\lib\database.js:48:64) {
+  code: 'ERR_DLOPEN_FAILED'
+}

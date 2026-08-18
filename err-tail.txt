@@ -1,0 +1,10 @@
+﻿    at Object.func [as .node] (node:electron/js2c/node_init:2:2559)
+    at Module.load (node:internal/modules/cjs/loader:1295:32)
+    at Module._load (node:internal/modules/cjs/loader:1111:12)
+    at c._load (node:electron/js2c/node_init:2:16955)
+    at Module.require (node:internal/modules/cjs/loader:1318:19)
+    at require (node:internal/modules/helpers:179:18)
+    at bindings (C:\Users\24605\CodeBuddy\20260804203011\spring-inventory\server\node_modules\bindings\bindings.js:112:48)
+    at new Database (C:\Users\24605\CodeBuddy\20260804203011\spring-inventory\server\node_modules\better-sqlite3\lib\database.js:48:64) {
+  code: 'ERR_DLOPEN_FAILED'
+}
