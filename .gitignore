@@ -15,6 +15,12 @@ scripts/local-bin/
 build*.log
 build*.txt
 check.txt
+dev-out.txt
+dev-err.txt
+app-out.txt
+app-err.txt
+err-head.txt
+err-tail.txt
 
 # 数据库（本地开发产生的数据库不入库）
 *.db
