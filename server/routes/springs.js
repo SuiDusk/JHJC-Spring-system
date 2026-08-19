@@ -22,6 +22,8 @@ const IMPORT_COLUMN_MAP = {
   '最高库存': 'max_stock',
   '单价': 'unit_price',
   '供应商': 'supplier',
+  '库位': 'location',
+  '颜色': 'color',
   '备注': 'remark',
 };
 
@@ -79,7 +81,7 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const { material_code, name, specification, material_type, wire_diameter, outer_diameter,
     free_length, total_coils, winding_direction, quantity, unit, status,
-    warehouse_area_id, min_stock, max_stock, unit_price, supplier, remark } = req.body;
+    warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark } = req.body;
 
   if (!material_code || !name) return res.status(400).json({ error: '物料编码和名称必填' });
 
@@ -88,13 +90,13 @@ router.post('/', (req, res) => {
     const result = db.prepare(`
       INSERT INTO springs (material_code, name, specification, material_type, wire_diameter,
         outer_diameter, free_length, total_coils, winding_direction, quantity, unit, status,
-        warehouse_area_id, min_stock, max_stock, unit_price, supplier, remark)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(material_code, name, specification || '', material_type || '', wire_diameter || 0,
       outer_diameter || 0, free_length || 0, total_coils || 0, winding_direction || 'right',
       quantity || 0, unit || '个', status || 'normal',
       warehouse_area_id || null, min_stock || 0, max_stock || 0,
-      unit_price || 0, supplier || '', remark || '');
+      unit_price || 0, supplier || '', location || '无', color || '无', remark || '');
 
     const row = db.prepare(`
       SELECT s.*, w.name as area_name, w.code as area_code
@@ -124,8 +126,8 @@ router.post('/import', (req, res) => {
   const insertStmt = db.prepare(`
     INSERT INTO springs (material_code, name, specification, material_type, wire_diameter,
       outer_diameter, free_length, total_coils, winding_direction, quantity, unit, status,
-      warehouse_area_id, min_stock, max_stock, unit_price, supplier, remark)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(material_code) DO UPDATE SET
       name=excluded.name, specification=excluded.specification, material_type=excluded.material_type,
       wire_diameter=excluded.wire_diameter, outer_diameter=excluded.outer_diameter,
@@ -133,7 +135,8 @@ router.post('/import', (req, res) => {
       winding_direction=excluded.winding_direction, quantity=excluded.quantity, unit=excluded.unit,
       status=excluded.status, warehouse_area_id=excluded.warehouse_area_id,
       min_stock=excluded.min_stock, max_stock=excluded.max_stock, unit_price=excluded.unit_price,
-      supplier=excluded.supplier, remark=excluded.remark, updated_at=CURRENT_TIMESTAMP
+      supplier=excluded.supplier, location=excluded.location, color=excluded.color,
+      remark=excluded.remark, updated_at=CURRENT_TIMESTAMP
   `);
 
   const created = [];
@@ -203,6 +206,8 @@ router.post('/import', (req, res) => {
         Math.floor(toNumber(getAny('最高库存', 'max_stock'))),
         toNumber(getAny('单价', 'unit_price')),
         String(getAny('供应商', 'supplier') ?? ''),
+        String(getAny('库位', 'location') ?? '无'),
+        String(getAny('颜色', 'color') ?? '无'),
         String(getAny('备注', 'remark') ?? '')
       );
       if (exists) updated.push(material_code);
@@ -223,7 +228,7 @@ router.put('/:id', (req, res) => {
 
   const fields = ['material_code','name','specification','material_type','wire_diameter',
     'outer_diameter','free_length','total_coils','winding_direction','quantity','unit','status',
-    'warehouse_area_id','min_stock','max_stock','unit_price','supplier','remark'];
+    'warehouse_area_id','min_stock','max_stock','unit_price','supplier','location','color','remark'];
 
   const setClauses = fields.map(f => `${f}=?`).join(',');
   const values = fields.map(f => req.body[f] !== undefined ? req.body[f] : existing[f]);

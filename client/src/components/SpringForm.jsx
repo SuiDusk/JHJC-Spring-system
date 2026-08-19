@@ -6,7 +6,7 @@ const defaultForm = {
   wire_diameter: '', outer_diameter: '', free_length: '', total_coils: '',
   winding_direction: 'right', quantity: 0, unit: '个', status: 'normal',
   warehouse_area_id: '', min_stock: 0, max_stock: 0,
-  unit_price: '', supplier: '', remark: ''
+  unit_price: '', supplier: '', location: '无', color: '无', remark: ''
 };
 
 export default function SpringForm({ spring, areas, onClose, onSave }) {
@@ -161,6 +161,17 @@ export default function SpringForm({ spring, areas, onClose, onSave }) {
               <div className="form-group">
                 <label>单价 (元)</label>
                 <input className="form-input" name="unit_price" type="number" step="0.01" value={form.unit_price} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>库位</label>
+                <input className="form-input" name="location" value={form.location} onChange={handleChange} placeholder="如 A-01-03" />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>颜色</label>
+                <input className="form-input" name="color" value={form.color} onChange={handleChange} placeholder="如 本色/黑色/镀锌" />
               </div>
               <div className="form-group">
                 <label>备注</label>

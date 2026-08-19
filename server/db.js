@@ -53,6 +53,8 @@ function initTables() {
       unit_price REAL DEFAULT 0,
       supplier TEXT DEFAULT '',
       remark TEXT DEFAULT '',
+      location TEXT DEFAULT '无',
+      color TEXT DEFAULT '无',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (warehouse_area_id) REFERENCES warehouse_areas(id) ON DELETE SET NULL
@@ -93,6 +95,15 @@ function initTables() {
     CREATE INDEX IF NOT EXISTS idx_inbound_spring ON inbound_records(spring_id);
     CREATE INDEX IF NOT EXISTS idx_outbound_spring ON outbound_records(spring_id);
   `);
+
+  // 迁移：为已存在的旧表补充新字段（库位/颜色），旧数据默认设置为 '无'
+  const springCols = db.prepare(`PRAGMA table_info(springs)`).all().map(c => c.name);
+  if (!springCols.includes('location')) {
+    db.exec(`ALTER TABLE springs ADD COLUMN location TEXT DEFAULT '无'`);
+  }
+  if (!springCols.includes('color')) {
+    db.exec(`ALTER TABLE springs ADD COLUMN color TEXT DEFAULT '无'`);
+  }
 
   // 插入默认仓库区域
   const insert = db.prepare(`INSERT OR IGNORE INTO warehouse_areas (name, code, description) VALUES (?, ?, ?)`);

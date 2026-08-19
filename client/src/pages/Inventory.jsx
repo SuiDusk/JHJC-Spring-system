@@ -8,7 +8,8 @@ const statusMap = { normal: '正常', locked: '锁定', defective: '次品', res
 // 导入/导出一致的列定义（顺序与后端映射一致）
 const IMPORT_HEADERS = [
   '物料编码', '名称', '规格', '材质', '线径mm', '外径mm', '自由长度mm', '总圈数',
-  '旋向', '库存数量', '单位', '仓库区域', '状态', '最低库存', '最高库存', '单价', '供应商', '备注',
+  '旋向', '库存数量', '单位', '仓库区域', '状态', '最低库存', '最高库存', '单价', '供应商',
+  '库位', '颜色', '备注',
 ];
 
 export default function Inventory() {
@@ -96,6 +97,8 @@ export default function Inventory() {
       最高库存: s.max_stock || 0,
       单价: s.unit_price || 0,
       供应商: s.supplier || '',
+      库位: s.location || '无',
+      颜色: s.color || '无',
       备注: s.remark || '',
     }));
     const sheet = XLSX.utils.json_to_sheet(rows);
@@ -126,6 +129,8 @@ export default function Inventory() {
       最高库存: 500,
       单价: 2.5,
       供应商: '示例供应商',
+      库位: 'A-01-03',
+      颜色: '本色',
       备注: '示例数据，导入前请删除此行',
     };
     const rows = IMPORT_HEADERS.map(h => ({ [h]: sampleRow[h] !== undefined ? sampleRow[h] : '' }));
@@ -270,6 +275,8 @@ export default function Inventory() {
                   <th>外径(mm)</th>
                   <th>库存数量</th>
                   <th>仓库区域</th>
+                  <th>库位</th>
+                  <th>颜色</th>
                   <th>状态</th>
                   <th>操作</th>
                 </tr>
@@ -297,6 +304,8 @@ export default function Inventory() {
                       <span style={{ fontSize: 12, color: 'var(--gray-400)', marginLeft: 2 }}>{s.unit}</span>
                     </td>
                     <td><span style={{ fontSize: 12, background: 'var(--gray-100)', padding: '2px 8px', borderRadius: 4 }}>{s.area_name || '未分配'}</span></td>
+                    <td>{s.location || '无'}</td>
+                    <td>{s.color || '无'}</td>
                     <td><span className={`tag tag-${s.status}`}>{statusMap[s.status] || s.status}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
