@@ -6,10 +6,16 @@ const router = Router();
 // 获取所有出库记录
 router.get('/', (req, res) => {
   const db = getDb();
-  const { spring_id, start_date, end_date, page = 1, limit = 50 } = req.query;
+  const { search, spring_id, start_date, end_date, page = 1, limit = 50 } = req.query;
   let conditions = [];
   let params = [];
 
+  if (search) {
+    // 对物料名称、物料编码、详情同时做模糊检索
+    conditions.push('(s.name LIKE ? OR s.material_code LIKE ? OR s.detail LIKE ?)');
+    const kw = `%${search}%`;
+    params.push(kw, kw, kw);
+  }
   if (spring_id) { conditions.push('obr.spring_id = ?'); params.push(spring_id); }
   if (start_date) { conditions.push('obr.created_at >= ?'); params.push(start_date); }
   if (end_date) { conditions.push('obr.created_at <= ?'); params.push(end_date + ' 23:59:59'); }
@@ -17,9 +23,14 @@ router.get('/', (req, res) => {
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
   const offset = (Number(page) - 1) * Number(limit);
 
-  const countRow = db.prepare(`SELECT COUNT(*) as total FROM outbound_records obr ${where}`).get(...params);
+  const countRow = db.prepare(`
+    SELECT COUNT(*) as total
+    FROM outbound_records obr
+    LEFT JOIN springs s ON obr.spring_id = s.id
+    ${where}
+  `).get(...params);
   const rows = db.prepare(`
-    SELECT obr.*, s.material_code, s.name as spring_name, s.specification, s.unit,
+    SELECT obr.*, s.material_code, s.name as spring_name, s.specification, s.unit, s.detail,
            w.name as area_name
     FROM outbound_records obr
     LEFT JOIN springs s ON obr.spring_id = s.id

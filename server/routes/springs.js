@@ -24,16 +24,24 @@ const IMPORT_COLUMN_MAP = {
   '供应商': 'supplier',
   '库位': 'location',
   '颜色': 'color',
+  '详情': 'detail',
   '备注': 'remark',
 };
 
 const STATUS_MAP = { '正常': 'normal', '锁定': 'locked', '次品': 'defective', '预留': 'reserved' };
 const WINDING_MAP = { '左旋': 'left', '右旋': 'right' };
 
-// 获取所有弹簧库存（支持搜索和区域筛选）
+// 排序方式：最近更改时间 / 物料编号 / 库存数量
+const SORT_MAP = {
+  updated: 's.updated_at DESC',
+  code: 's.material_code COLLATE NOCASE ASC',
+  quantity: 's.quantity DESC',
+};
+
+// 获取所有弹簧库存（支持搜索、区域筛选与排序；置顶物料始终排在最前）
 router.get('/', (req, res) => {
   const db = getDb();
-  const { search, area_id, status, low_stock } = req.query;
+  const { search, area_id, status, low_stock, sort } = req.query;
   let sql = `
     SELECT s.*, w.name as area_name, w.code as area_code
     FROM springs s
@@ -43,9 +51,9 @@ router.get('/', (req, res) => {
   const params = [];
 
   if (search) {
-    sql += ` AND (s.material_code LIKE ? OR s.name LIKE ? OR s.specification LIKE ? OR s.supplier LIKE ?)`;
+    sql += ` AND (s.material_code LIKE ? OR s.name LIKE ? OR s.specification LIKE ? OR s.supplier LIKE ? OR s.detail LIKE ?)`;
     const kw = `%${search}%`;
-    params.push(kw, kw, kw, kw);
+    params.push(kw, kw, kw, kw, kw);
   }
   if (area_id) {
     sql += ` AND s.warehouse_area_id = ?`;
@@ -59,7 +67,9 @@ router.get('/', (req, res) => {
     sql += ` AND s.quantity <= s.min_stock AND s.min_stock > 0`;
   }
 
-  sql += ` ORDER BY s.updated_at DESC`;
+  // 置顶优先，其次按所选排序方式（默认最近更改时间）
+  const orderBy = SORT_MAP[sort] || SORT_MAP.updated;
+  sql += ` ORDER BY s.pinned DESC, ${orderBy}`;
   const rows = db.prepare(sql).all(...params);
   res.json(rows);
 });
@@ -81,7 +91,7 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const { material_code, name, specification, material_type, wire_diameter, outer_diameter,
     free_length, total_coils, winding_direction, quantity, unit, status,
-    warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark } = req.body;
+    warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, detail, remark } = req.body;
 
   if (!material_code || !name) return res.status(400).json({ error: '物料编码和名称必填' });
 
@@ -90,13 +100,13 @@ router.post('/', (req, res) => {
     const result = db.prepare(`
       INSERT INTO springs (material_code, name, specification, material_type, wire_diameter,
         outer_diameter, free_length, total_coils, winding_direction, quantity, unit, status,
-        warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, detail, remark)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(material_code, name, specification || '', material_type || '', wire_diameter || 0,
       outer_diameter || 0, free_length || 0, total_coils || 0, winding_direction || 'right',
       quantity || 0, unit || '个', status || 'normal',
       warehouse_area_id || null, min_stock || 0, max_stock || 0,
-      unit_price || 0, supplier || '', location || '无', color || '无', remark || '');
+      unit_price || 0, supplier || '', location || '无', color || '无', detail || '', remark || '');
 
     const row = db.prepare(`
       SELECT s.*, w.name as area_name, w.code as area_code
@@ -126,8 +136,8 @@ router.post('/import', (req, res) => {
   const insertStmt = db.prepare(`
     INSERT INTO springs (material_code, name, specification, material_type, wire_diameter,
       outer_diameter, free_length, total_coils, winding_direction, quantity, unit, status,
-      warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, remark)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      warehouse_area_id, min_stock, max_stock, unit_price, supplier, location, color, detail, remark)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(material_code) DO UPDATE SET
       name=excluded.name, specification=excluded.specification, material_type=excluded.material_type,
       wire_diameter=excluded.wire_diameter, outer_diameter=excluded.outer_diameter,
@@ -136,7 +146,7 @@ router.post('/import', (req, res) => {
       status=excluded.status, warehouse_area_id=excluded.warehouse_area_id,
       min_stock=excluded.min_stock, max_stock=excluded.max_stock, unit_price=excluded.unit_price,
       supplier=excluded.supplier, location=excluded.location, color=excluded.color,
-      remark=excluded.remark, updated_at=CURRENT_TIMESTAMP
+      detail=excluded.detail, remark=excluded.remark, updated_at=CURRENT_TIMESTAMP
   `);
 
   const created = [];
@@ -208,6 +218,7 @@ router.post('/import', (req, res) => {
         String(getAny('供应商', 'supplier') ?? ''),
         String(getAny('库位', 'location') ?? '无'),
         String(getAny('颜色', 'color') ?? '无'),
+        String(getAny('详情', 'detail') ?? ''),
         String(getAny('备注', 'remark') ?? '')
       );
       if (exists) updated.push(material_code);
@@ -220,6 +231,27 @@ router.post('/import', (req, res) => {
   res.json({ created: created.length, updated: updated.length, errors });
 });
 
+// 切换/设置置顶状态
+// 注意：不修改 updated_at，避免置顶操作影响"按最近更改时间"排序
+router.put('/:id/pin', (req, res) => {
+  const db = getDb();
+  const existing = db.prepare('SELECT * FROM springs WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: '物料不存在' });
+
+  const next = req.body && req.body.pinned !== undefined
+    ? (req.body.pinned ? 1 : 0)
+    : (existing.pinned ? 0 : 1);
+
+  db.prepare('UPDATE springs SET pinned = ? WHERE id = ?').run(next, req.params.id);
+
+  const row = db.prepare(`
+    SELECT s.*, w.name as area_name, w.code as area_code
+    FROM springs s LEFT JOIN warehouse_areas w ON s.warehouse_area_id = w.id
+    WHERE s.id = ?
+  `).get(req.params.id);
+  res.json(row);
+});
+
 // 更新弹簧物料
 router.put('/:id', (req, res) => {
   const db = getDb();
@@ -228,7 +260,7 @@ router.put('/:id', (req, res) => {
 
   const fields = ['material_code','name','specification','material_type','wire_diameter',
     'outer_diameter','free_length','total_coils','winding_direction','quantity','unit','status',
-    'warehouse_area_id','min_stock','max_stock','unit_price','supplier','location','color','remark'];
+    'warehouse_area_id','min_stock','max_stock','unit_price','supplier','location','color','detail','pinned','remark'];
 
   const setClauses = fields.map(f => `${f}=?`).join(',');
   const values = fields.map(f => req.body[f] !== undefined ? req.body[f] : existing[f]);

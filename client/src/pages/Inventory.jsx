@@ -9,7 +9,7 @@ const statusMap = { normal: '正常', locked: '锁定', defective: '次品', res
 const IMPORT_HEADERS = [
   '物料编码', '名称', '规格', '材质', '线径mm', '外径mm', '自由长度mm', '总圈数',
   '旋向', '库存数量', '单位', '仓库区域', '状态', '最低库存', '最高库存', '单价', '供应商',
-  '库位', '颜色', '备注',
+  '库位', '颜色', '详情', '备注',
 ];
 
 export default function Inventory() {
@@ -20,6 +20,7 @@ export default function Inventory() {
   const [filterArea, setFilterArea] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterLowStock, setFilterLowStock] = useState(false);
+  const [sort, setSort] = useState('updated');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -34,12 +35,13 @@ export default function Inventory() {
     if (filterArea) params.area_id = filterArea;
     if (filterStatus) params.status = filterStatus;
     if (filterLowStock) params.low_stock = '1';
+    if (sort) params.sort = sort;
 
     Promise.all([api.getSprings(params), api.getAreas()])
       .then(([s, a]) => { setSprings(s); setAreas(a); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [search, filterArea, filterStatus, filterLowStock]);
+  }, [search, filterArea, filterStatus, filterLowStock, sort]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -99,6 +101,7 @@ export default function Inventory() {
       供应商: s.supplier || '',
       库位: s.location || '无',
       颜色: s.color || '无',
+      详情: s.detail || '',
       备注: s.remark || '',
     }));
     const sheet = XLSX.utils.json_to_sheet(rows);
@@ -131,6 +134,7 @@ export default function Inventory() {
       供应商: '示例供应商',
       库位: 'A-01-03',
       颜色: '本色',
+      详情: '示例：用于XX机型减震，需按图纸工艺处理',
       备注: '示例数据，导入前请删除此行',
     };
     const rows = IMPORT_HEADERS.map(h => ({ [h]: sampleRow[h] !== undefined ? sampleRow[h] : '' }));
@@ -171,6 +175,14 @@ export default function Inventory() {
     }
   };
 
+  // 置顶 / 取消置顶（置顶物料始终排在列表最前）
+  const handleTogglePin = async (s) => {
+    try {
+      await api.togglePin(s.id, s.pinned ? 0 : 1);
+      loadData();
+    } catch (e) { alert(e.message); }
+  };
+
   const handleDelete = async (id, name) => {
     if (!confirm(`确定要删除物料 "${name}" 吗？`)) return;
     try {
@@ -193,7 +205,7 @@ export default function Inventory() {
         <div className="search-box" style={{ marginBottom: 16 }}>
           <input
             className="search-input"
-            placeholder="搜索物料编码/名称/规格..."
+            placeholder="搜索物料编码/名称/规格/详情..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -212,6 +224,11 @@ export default function Inventory() {
             <input type="checkbox" checked={filterLowStock} onChange={e => setFilterLowStock(e.target.checked)} />
             低库存预警
           </label>
+          <select value={sort} onChange={e => setSort(e.target.value)} title="排序方式">
+            <option value="updated">按最近更改时间排序</option>
+            <option value="code">按物料编号排序</option>
+            <option value="quantity">按库存数量排序</option>
+          </select>
         </div>
 
         {/* 选择与导出工具栏 */}
@@ -277,6 +294,7 @@ export default function Inventory() {
                   <th>仓库区域</th>
                   <th>库位</th>
                   <th>颜色</th>
+                  <th>详情</th>
                   <th>状态</th>
                   <th>操作</th>
                 </tr>
@@ -291,7 +309,12 @@ export default function Inventory() {
                         onChange={() => toggleSelect(s.id)}
                       />
                     </td>
-                    <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)' }}>{s.material_code}</td>
+                    <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--primary)' }}>
+                      {s.pinned ? (
+                        <span style={{ fontSize: 11, fontFamily: 'inherit', background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 4, marginRight: 6 }}>置顶</span>
+                      ) : null}
+                      {s.material_code}
+                    </td>
                     <td>{s.name}</td>
                     <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{s.specification || '-'}</td>
                     <td>{s.material_type || '-'}</td>
@@ -306,9 +329,15 @@ export default function Inventory() {
                     <td><span style={{ fontSize: 12, background: 'var(--gray-100)', padding: '2px 8px', borderRadius: 4 }}>{s.area_name || '未分配'}</span></td>
                     <td>{s.location || '无'}</td>
                     <td>{s.color || '无'}</td>
+                    <td title={s.detail || ''} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--gray-600)' }}>
+                      {s.detail || '-'}
+                    </td>
                     <td><span className={`tag tag-${s.status}`}>{statusMap[s.status] || s.status}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => handleTogglePin(s)}>
+                          {s.pinned ? '取消置顶' : '置顶'}
+                        </button>
                         <button className="btn btn-outline btn-sm" onClick={() => { setEditing(s); setModalOpen(true); }}>编辑</button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s.id, s.name)}>删除</button>
                       </div>

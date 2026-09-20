@@ -8,16 +8,19 @@ export default function Outbound() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const limit = 20;
 
   const loadData = useCallback(() => {
     setLoading(true);
-    api.getOutbound({ page, limit })
+    const params = { page, limit };
+    if (search) params.search = search;
+    api.getOutbound(params)
       .then(res => { setRecords(res.data); setTotal(res.total); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -39,8 +42,21 @@ export default function Outbound() {
           <button className="btn btn-danger" onClick={() => setModalOpen(true)}>+ 新增出库</button>
         </div>
 
+        {/* 检索栏：支持按物料名称/编码/详情模糊检索 */}
+        <div className="search-box" style={{ marginBottom: 16 }}>
+          <input
+            className="search-input"
+            placeholder="搜索物料名称/编号/详情..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+          />
+          {search && (
+            <button className="btn btn-outline btn-sm" onClick={() => { setSearch(''); setPage(1); }}>重置</button>
+          )}
+        </div>
+
         {loading ? <div className="empty"><p>加载中...</p></div> :
-          records.length === 0 ? <div className="empty"><div className="icon">📤</div><p>暂无出库记录</p></div> :
+          records.length === 0 ? <div className="empty"><div className="icon">📤</div><p>{search ? '未找到匹配的出库记录' : '暂无出库记录'}</p></div> :
           <div className="table-wrap">
             <table>
               <thead>
@@ -49,6 +65,7 @@ export default function Outbound() {
                   <th>物料编码</th>
                   <th>弹簧名称</th>
                   <th>规格</th>
+                  <th>详情</th>
                   <th>出库数量</th>
                   <th>领用人</th>
                   <th>用途</th>
@@ -66,7 +83,10 @@ export default function Outbound() {
                     <td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--primary)' }}>{r.material_code}</td>
                     <td>{r.spring_name}</td>
                     <td style={{ fontSize: 12, color: 'var(--gray-500)' }}>{r.specification || '-'}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--danger)', fontSize: 16 }}>-{r.quantity}</td>
+                    <td title={r.detail || ''} style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--gray-600)' }}>
+                      {r.detail || '-'}
+                    </td>
+                    <td style={{ fontWeight: '700', color: 'var(--danger)', fontSize: 16 }}>-{r.quantity}</td>
                     <td>{r.recipient || '-'}</td>
                     <td>{r.purpose || '-'}</td>
                     <td>{r.order_no || '-'}</td>

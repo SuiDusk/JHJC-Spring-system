@@ -55,9 +55,26 @@ export default function InOutForm({ type, onClose, onSave }) {
     }
   };
 
-  const filteredSprings = searchSpring
-    ? springs.filter(s => s.material_code.includes(searchSpring) || s.name.includes(searchSpring))
+  // 关键字（忽略大小写与首尾空格）：支持物料编码 / 名称 / 详情 模糊匹配
+  const kw = searchSpring.trim().toLowerCase();
+  const matchedSprings = kw
+    ? springs.filter(s =>
+        (s.material_code || '').toLowerCase().includes(kw) ||
+        (s.name || '').toLowerCase().includes(kw) ||
+        (s.detail || '').toLowerCase().includes(kw))
     : springs;
+  // 已选中的物料始终保留在候选项中，避免筛选后选中项从列表中"消失"
+  const filteredSprings =
+    selectedSpring && !matchedSprings.some(s => s.id === selectedSpring.id)
+      ? [selectedSpring, ...matchedSprings]
+      : matchedSprings;
+
+  // 候选项中附带详情摘要，便于确认命中的内容
+  const detailBrief = (s) => {
+    const text = (s.detail || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    return ' | ' + (text.length > 24 ? text.slice(0, 24) + '…' : text);
+  };
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -72,11 +89,18 @@ export default function InOutForm({ type, onClose, onSave }) {
               <label className="required">选择物料</label>
               <input
                 className="form-input"
-                placeholder="搜索物料编码或名称..."
+                placeholder="搜索物料编码 / 名称 / 详情..."
                 value={searchSpring}
                 onChange={e => setSearchSpring(e.target.value)}
                 style={{ marginBottom: 8 }}
               />
+              {kw && (
+                <div style={{ fontSize: 12, marginBottom: 8, color: matchedSprings.length ? 'var(--gray-500)' : 'var(--danger)' }}>
+                  {matchedSprings.length > 0
+                    ? `匹配到 ${matchedSprings.length} 项，见下方"请选择物料"列表`
+                    : (selectedSpring ? '未找到匹配物料，下方保留当前已选物料' : '未找到匹配的物料')}
+                </div>
+              )}
               <select
                 className="form-input"
                 name="spring_id"
@@ -88,7 +112,7 @@ export default function InOutForm({ type, onClose, onSave }) {
                 <option value="">请选择物料</option>
                 {filteredSprings.map(s => (
                   <option key={s.id} value={s.id}>
-                    [{s.material_code}] {s.name} - 库存: {s.quantity}{s.unit}
+                    [{s.material_code}] {s.name} - 库存: {s.quantity}{s.unit}{detailBrief(s)}
                   </option>
                 ))}
               </select>

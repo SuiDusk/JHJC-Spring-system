@@ -6,7 +6,7 @@ const defaultForm = {
   wire_diameter: '', outer_diameter: '', free_length: '', total_coils: '',
   winding_direction: 'right', quantity: 0, unit: '个', status: 'normal',
   warehouse_area_id: '', min_stock: 0, max_stock: 0,
-  unit_price: '', supplier: '', location: '无', color: '无', remark: ''
+  unit_price: '', supplier: '', location: '无', color: '无', detail: '', remark: ''
 };
 
 export default function SpringForm({ spring, areas, onClose, onSave }) {
@@ -177,6 +177,18 @@ export default function SpringForm({ spring, areas, onClose, onSave }) {
                 <label>备注</label>
                 <input className="form-input" name="remark" value={form.remark} onChange={handleChange} />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>详情</label>
+              <textarea
+                className="form-textarea"
+                name="detail"
+                value={form.detail}
+                onChange={handleChange}
+                rows={3}
+                placeholder="物料的详细说明，如用途、工艺要求、适配机型等（支持出入库模糊检索）"
+              />
             </div>
 
             {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12, padding: '8px 12px', background: 'var(--danger-light)', borderRadius: 8 }}>{error}</div>}

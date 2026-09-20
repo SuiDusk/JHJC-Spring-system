@@ -55,6 +55,8 @@ function initTables() {
       remark TEXT DEFAULT '',
       location TEXT DEFAULT '无',
       color TEXT DEFAULT '无',
+      detail TEXT DEFAULT '',
+      pinned INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (warehouse_area_id) REFERENCES warehouse_areas(id) ON DELETE SET NULL
@@ -103,6 +105,14 @@ function initTables() {
   }
   if (!springCols.includes('color')) {
     db.exec(`ALTER TABLE springs ADD COLUMN color TEXT DEFAULT '无'`);
+  }
+  // 迁移：新增"详情"字段，旧数据默认为空
+  if (!springCols.includes('detail')) {
+    db.exec(`ALTER TABLE springs ADD COLUMN detail TEXT DEFAULT ''`);
+  }
+  // 迁移：新增"置顶"字段，旧数据默认不置顶
+  if (!springCols.includes('pinned')) {
+    db.exec(`ALTER TABLE springs ADD COLUMN pinned INTEGER DEFAULT 0`);
   }
 
   // 插入默认仓库区域
