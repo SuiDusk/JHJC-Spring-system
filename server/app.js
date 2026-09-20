@@ -26,7 +26,9 @@ export function createApp() {
   const app = express();
 
   app.use(cors());
-  app.use(express.json());
+  // 请求体上限：批量导入 Excel 时单次可能提交上千行（约几百 KB~数 MB），
+  // express.json() 默认仅 100kb，会导致 413 PayloadTooLargeError 而无法导入
+  app.use(express.json({ limit: '20mb' }));
 
   // API路由
   app.use('/api/springs', springsRouter);

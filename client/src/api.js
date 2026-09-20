@@ -5,8 +5,28 @@ async function request(url, options = {}) {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || '请求失败');
+
+  // 服务端异常（如 413 请求体过大、500）会返回 HTML 而非 JSON，
+  // 这里先按文本读取再尝试解析，避免抛出 "Unexpected token '<'" 这类难懂的报错
+  const text = await res.text();
+  let data = null;
+  if (text) {
+    try { data = JSON.parse(text); } catch { data = null; }
+  }
+
+  if (!res.ok) {
+    if (data?.error) throw new Error(data.error);
+    // 针对常见状态码给出可读提示
+    const hint = {
+      413: '数据量过大（HTTP 413），请减少单次导入的行数后重试',
+      401: '身份验证失败（HTTP 401）',
+      403: '没有权限（HTTP 403）',
+      404: '接口不存在（HTTP 404）',
+    }[res.status];
+    throw new Error(hint || `请求失败（HTTP ${res.status}）`);
+  }
+
+  if (data === null) throw new Error('服务器返回了无法解析的内容');
   return data;
 }
 

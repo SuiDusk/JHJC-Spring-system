@@ -3,7 +3,7 @@
   "productName": "弹簧厂出入库管理系统",
   "description": "弹簧厂出入库管理系统 - 库存管理、入库出库、仓库区域、数据看板",
   "author": "spring-factory",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "main": "electron/main.js",
